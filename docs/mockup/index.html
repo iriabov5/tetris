@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Тетрис — макет экрана</title><link rel="stylesheet" href="../../frontend/src/styles.css"></head>
+<body>
+<header class="header"><span class="mark" aria-hidden="true"></span><span class="brand">Тетрис</span></header>
+<main class="game-layout"><section aria-label="Игровое поле"><div class="board" id="board" style="grid-template-columns: repeat(10, minmax(0, 1fr))"></div><div class="legend"><span><i class="active"></i> Фигура</span><span><i class="settled"></i> На поле</span></div></section>
+<aside class="sidebar"><h1>Собирайте строки</h1><output class="status" id="status">Партия идёт</output><div class="stat"><span>Убрано строк</span><strong>0</strong></div><label class="speed-control">Скорость <select><option>Спокойно</option><option selected>Обычно</option><option>Быстро</option></select></label><div class="controls"><button type="button" class="shortcut-button" aria-keyshortcuts="ArrowLeft"><span>Влево</span><kbd class="key-hint" aria-hidden="true">←</kbd></button><button type="button" class="shortcut-button" aria-keyshortcuts="ArrowRight"><span>Вправо</span><kbd class="key-hint" aria-hidden="true">→</kbd></button><button type="button" class="shortcut-button" aria-keyshortcuts="ArrowUp"><span>Повернуть</span><kbd class="key-hint" aria-hidden="true">↑</kbd></button><button type="button" class="shortcut-button" aria-keyshortcuts="Space"><span>Опустить</span><kbd class="key-hint" aria-hidden="true">Пробел</kbd></button></div><button type="button" class="pause-game shortcut-button" id="pause" aria-keyshortcuts="P Escape"><span id="pause-label">Пауза</span><kbd class="key-hint" aria-hidden="true">P / Esc</kbd></button><button type="button" class="new-game">Новая игра</button><p class="notice"></p></aside></main>
+<script>
+const active = new Set(['4,6', '5,6', '3,7', '4,7']);
+const settled = new Set(['0,17', '0,18', '1,18', '2,18', '1,19', '2,19', '7,18', '6,19', '7,19', '8,19']);
+for (let index = 0; index < 200; index++) {
+ const key = `${index % 10},${Math.floor(index / 10)}`;
+ const cell = document.createElement('span');
+ let type = 'empty';
+ if (active.has(key)) type = 'active';
+ else if (settled.has(key)) type = 'settled';
+ cell.className = `cell ${type}`;
+ document.getElementById('board').append(cell);
+}
+if (new URLSearchParams(location.search).has('paused')) {
+ document.getElementById('status').textContent = 'Пауза';
+ document.getElementById('pause-label').textContent = 'Продолжить';
+ for (const button of document.querySelectorAll('.controls button')) button.disabled = true;
+}
+</script></body></html>

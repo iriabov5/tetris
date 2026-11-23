@@ -1,0 +1,252 @@
+openapi: 3.0.1
+info:
+  title: Tetris API
+  description: Партии хранятся в памяти процесса. Доступ локального демо без аутентификации.
+    Try it out выполняет реальные действия; перезапуск сервера удаляет партии.
+  version: 1.0.0
+servers:
+- url: /
+paths:
+  /api/games:
+    post:
+      tags:
+      - game-controller
+      summary: Создать независимую партию 10 на 20
+      operationId: createGame
+      responses:
+        "201":
+          description: Партия создана
+          headers:
+            Location:
+              description: Путь чтения созданной партии
+              schema:
+                type: string
+                example: /api/games/00000000-0000-0000-0000-000000000001
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameSnapshot"
+        "500":
+          $ref: "#/components/responses/OperationFailed"
+  /api/games/{id}/commands:
+    post:
+      tags:
+      - game-controller
+      summary: Выполнить одну команду
+      description: "Каждый POST выполняет отдельное действие. DOWN делает шаг вниз\
+        \ или закрепляет фигуру. HARD_DROP сразу опускает и закрепляет фигуру, очи\
+        щает строки и выпускает следующую. BLOCKED — штатный результат HTTP 200. П\
+        овтор POST выполняет новое действие."
+      operationId: executeCommand
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommandBody"
+        required: true
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommandOutcome"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "500":
+          $ref: "#/components/responses/OperationFailed"
+  /api/games/{id}:
+    get:
+      tags:
+      - game-controller
+      summary: Прочитать текущий снимок партии
+      operationId: readGame
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  schemas:
+    Problem:
+      required:
+      - status
+      - title
+      type: object
+      properties:
+        status:
+          type: integer
+          format: int32
+        title:
+          type: string
+        detail:
+          type: string
+        type:
+          type: string
+        instance:
+          type: string
+    ActiveView:
+      required:
+      - cells
+      - kind
+      type: object
+      properties:
+        kind:
+          type: string
+        cells:
+          maxItems: 4
+          minItems: 4
+          uniqueItems: true
+          type: array
+          items:
+            $ref: "#/components/schemas/Cell"
+    Cell:
+      required:
+      - x
+      - "y"
+      type: object
+      properties:
+        x:
+          minimum: 0
+          type: integer
+          format: int32
+        "y":
+          minimum: 0
+          type: integer
+          format: int32
+    GameSnapshot:
+      required:
+      - active
+      - clearedLines
+      - gameId
+      - height
+      - settled
+      - status
+      - width
+      type: object
+      properties:
+        gameId:
+          type: string
+          format: uuid
+        width:
+          minimum: 1
+          type: integer
+          format: int32
+        height:
+          minimum: 1
+          type: integer
+          format: int32
+        status:
+          type: string
+          enum:
+          - RUNNING
+          - GAME_OVER
+        settled:
+          type: array
+          items:
+            $ref: "#/components/schemas/Cell"
+        active:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/ActiveView"
+        clearedLines:
+          minimum: 0
+          type: integer
+          format: int32
+      example:
+        active:
+          cells:
+          - "y": 0
+            x: 4
+          - "y": 0
+            x: 5
+          - "y": 1
+            x: 4
+          - "y": 1
+            x: 5
+          kind: O
+        status: RUNNING
+        settled: []
+        gameId: 00000000-0000-0000-0000-000000000001
+        width: 10
+        height: 20
+        clearedLines: 0
+    CommandBody:
+      required:
+      - command
+      type: object
+      properties:
+        command:
+          type: string
+          description: Действие активной фигуры
+          example: HARD_DROP
+          enum:
+          - LEFT
+          - RIGHT
+          - ROTATE
+          - DOWN
+          - HARD_DROP
+    CommandOutcome:
+      required:
+      - result
+      - state
+      type: object
+      properties:
+        result:
+          type: string
+          enum:
+          - APPLIED
+          - BLOCKED
+          - FINISHED
+        state:
+          $ref: "#/components/schemas/GameSnapshot"
+  responses:
+    BadRequest:
+      description: "Некорректный UUID, JSON или отсутствующая/null/неизвестная ком\
+        анда"
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Партия не найдена
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    UnsupportedMediaType:
+      description: Ожидается application/json
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    OperationFailed:
+      description: Сбой операции; внутренние детали доступны только в журнале
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"

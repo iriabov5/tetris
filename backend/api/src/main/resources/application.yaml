@@ -1,0 +1,25 @@
+server:
+  address: 127.0.0.1
+  port: 8080
+
+spring:
+  application:
+    name: tetris
+  mvc:
+    problemdetails:
+      enabled: true
+
+logging:
+  level:
+    dev.tetris.api: INFO
+
+springdoc:
+  api-docs:
+    enabled: true
+    version: OPENAPI_3_0
+  override-with-generic-response: false
+  paths-to-match: /api/games/**
+  swagger-ui:
+    enabled: true
+    disable-swagger-default-url: true
+    validator-url: ""
